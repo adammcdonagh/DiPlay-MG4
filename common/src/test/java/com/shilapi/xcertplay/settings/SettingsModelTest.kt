@@ -65,14 +65,18 @@ class SettingsModelTest {
     }
 
     @Test fun noRowAppearsTwice() {
-        for (generation in listOf(Generation.SWI165, Generation.SWI69)) for (connection in ConnectionChoice.entries) {
+        for (generation in listOf(Generation.SWI165, Generation.SWI68, Generation.SWI69)) for (connection in ConnectionChoice.entries) {
             val all = SettingsLayout.allRows(env(generation, 28, connection))
             assertEquals("$generation $connection", all.size, all.toSet().size)
         }
     }
 
-    @Test fun everyRowIsReachableOnSwi165() {
-        val reachable = ConnectionChoice.entries.flatMap { SettingsLayout.allRows(env(connection = it)) }.toSet()
+    @Test fun everyRowIsReachableOnSupportedFirmware() {
+        val reachable = listOf(Generation.SWI165, Generation.SWI68).flatMap { generation ->
+            ConnectionChoice.entries.flatMap {
+                SettingsLayout.allRows(env(generation = generation, connection = it).copy(advancedAudioMappingSupported = true))
+            }
+        }.toSet()
         assertEquals(SettingRow.entries.toSet(), reachable)
     }
 
@@ -98,5 +102,18 @@ class SettingsModelTest {
         assertTrue(SettingRow.REPORTED_SCREEN_SIZE in rows(SettingsCategory.DISPLAY, env(Generation.SWI165)))
         assertFalse(SettingRow.REPORTED_SCREEN_SIZE in rows(SettingsCategory.DISPLAY, env(Generation.SWI69)))
         assertFalse(SettingRow.REPORTED_SCREEN_SIZE in rows(SettingsCategory.DISPLAY, env(Generation.OTHER)))
+    }
+
+    @Test fun swi68ShowsFormerSwi165SettingsButNotUnsupportedVehicleReads() {
+        val all = SettingsLayout.allRows(env(Generation.SWI68)).toSet()
+        assertTrue(all.containsAll(SettingsLayout.originallySwi165Only))
+        assertFalse(SettingRow.CAR_BATTERY in all)
+        assertFalse(SettingRow.CHARGING_CONNECTORS in all)
+        assertFalse(SettingRow.LOW_CHARGE_WARNING in all)
+        assertFalse(SettingRow.VIDEO_WHILE_PARKED in all)
+        assertTrue(SettingRow.AUDIO_FOCUS in all)
+        assertTrue(SettingRow.MEDIA_CHANNEL in all)
+        assertFalse(SettingRow.ADVANCED_AUDIO_MAPPING in all)
+        assertTrue(SettingRow.ADVANCED_AUDIO_MAPPING in SettingsLayout.allRows(env(Generation.SWI68).copy(advancedAudioMappingSupported = true)))
     }
 }

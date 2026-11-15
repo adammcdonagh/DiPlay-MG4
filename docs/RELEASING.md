@@ -13,7 +13,7 @@ published release. Written for the MG4 Comfort / SWI69 / Android 9 target.
 
 | Path | What it is |
 | --- | --- |
-| `mobile/` | The app that ships. `applicationId com.shihab.diplay`; the debug build adds `.hudtest` and `-hud-test`, so car-test builds install as `com.shihab.diplay.hudtest`. |
+| `mobile/` | The app that ships. `applicationId com.shihab.diplay`; the debug build adds `.hudtest` and `-test`, so car-test builds install as `com.shihab.diplay.hudtest`. |
 | `common/` | Activities and UI — `DiPlayActivity`, `CarPlayHostActivity`, `OtaUpdater`. |
 | `shared/` | The CarPlay stack: AirPlay, iAP2, media, orchestration, networking. |
 | `automotive/` | Android Automotive variant. Not the MG4 target. |

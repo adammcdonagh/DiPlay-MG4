@@ -31,12 +31,19 @@ internal data class Mg4FirmwareProfile(
      */
     val squareCorners: Boolean = false,
 ) {
-    enum class Generation { SWI69, SWI165, OTHER }
+    enum class Generation {
+        SWI68, SWI69, SWI165, OTHER;
+
+        val supportsExperimentalCarSettings: Boolean get() = this == SWI68 || this == SWI165
+    }
 
     /** Window position and size in pixels, relative to the launcher's content area. */
     data class LauncherCard(val x: Int, val y: Int, val width: Int, val height: Int)
 
-    val isMg4: Boolean get() = generation != Generation.OTHER
+    // SWI68 keeps the existing upstream defaults until its other car integrations are verified.
+    val isMg4: Boolean get() = generation == Generation.SWI69 || generation == Generation.SWI165
+    val supportsExperimentalCarSettings: Boolean get() = generation.supportsExperimentalCarSettings
+    val usesMg4Settings: Boolean get() = isMg4 || generation == Generation.SWI68
 
     companion object {
         const val FIRMWARE_PROPERTY = "ro.build.mt2712.version"
@@ -65,6 +72,14 @@ internal data class Mg4FirmwareProfile(
                     // needs the car to switch source and was the less reliable path here.
                     defaultAudioMode = AudioMode.CARPLAY_WIFI,
                     squareCorners = true,
+                )
+                value == "SWI68" || value.startsWith("SWI68-") -> Mg4FirmwareProfile(
+                    generation = Generation.SWI68,
+                    firmware = value,
+                    stockLauncherPackage = null,
+                    launcherCarPlayCard = null,
+                    preferSurfaceVideo = false,
+                    defaultAudioMode = AudioMode.HYBRID_BLUETOOTH,
                 )
                 value.startsWith("SWI69") -> Mg4FirmwareProfile(
                     generation = Generation.SWI69,

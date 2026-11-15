@@ -86,7 +86,8 @@ internal object Mg4CarIntegration {
 
     @Synchronized
     fun attach(context: Context, next: CarPlayController, sink: AndroidMediaSink, log: (String) -> Unit) {
-        if (!Mg4FirmwareProfile.detect().isMg4) return
+        val profile = Mg4FirmwareProfile.detect()
+        if (!profile.isMg4 && !AirPlayPersistence.loadShowCallsToCar(context)) return
         releaseLocked()
         val app = context.applicationContext
         appContext = app
@@ -102,8 +103,10 @@ internal object Mg4CarIntegration {
             next.callListener = CarPlayTelephony::onChange
         }
 
-        registerVendorListener(app, sink, log)
-        registerDisplayReceiver(app, sink, log)
+        if (profile.isMg4) {
+            registerVendorListener(app, sink, log)
+            registerDisplayReceiver(app, sink, log)
+        }
     }
 
     /** Ends the hooks for [expected]; a newer session's hooks are left alone. */

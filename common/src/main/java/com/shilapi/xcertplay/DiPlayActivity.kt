@@ -110,7 +110,7 @@ class DiPlayActivity : ComponentActivity() {
         }
         pendingCarHotspotSetup = savedInstanceState?.getBoolean("pending_car_hotspot") ?: false
         page = savedInstanceState?.getString("page") ?: intent.getStringExtra("page") ?: "home"
-        if (Mg4FirmwareProfile.detect().isMg4) {
+        if (Mg4FirmwareProfile.detect().usesMg4Settings) {
             mg4Settings = com.shilapi.xcertplay.settings.Mg4SettingsPage(this, settingsHost).apply { restore(savedInstanceState) }
         }
         render()
@@ -1415,6 +1415,12 @@ class DiPlayActivity : ComponentActivity() {
             val current = AirPlayPersistence.loadNavigationAudioChannel(this@DiPlayActivity)
             showChannelDialog(getString(R.string.contrib_audio_home_nav_channel_label), current, navigation = true) { value ->
                 if (value != current) { AirPlayPersistence.saveNavigationAudioChannel(this@DiPlayActivity, value); onSaved() }
+            }
+        }
+        override fun editMediaChannel(onSaved: () -> Unit) {
+            val current = AirPlayPersistence.loadMediaAudioChannel(this@DiPlayActivity)
+            showChannelDialog(getString(R.string.contrib_audio_home_media_channel_label), current, navigation = false) { value ->
+                if (value != current) { AirPlayPersistence.saveMediaAudioChannel(this@DiPlayActivity, value); onSaved() }
             }
         }
         override fun setLocationReporting(enabled: Boolean) {
