@@ -11,7 +11,7 @@ import android.os.Parcel
 import com.shilapi.xcertplay.iap2.wire.Iap2Frame
 
 /**
- * CarPlay turn-by-turn on the MG4 SWI165 instrument cluster.
+ * CarPlay turn-by-turn on the MG4 SWI165 and experimental SWI68 instrument cluster.
  *
  * Read from the car's own APKs (SaicAdapterService_eh32_aus, ClusterInteraction_eh32_aus_local_P):
  * the cluster's navigation slot is fed by `com.saicmotor.adapterservice`. The car's sat-nav pushes
@@ -77,6 +77,8 @@ object Mg4ClusterNavigation {
                 connection,
                 Context.BIND_AUTO_CREATE,
             )
+        }.onFailure { error ->
+            report("Cluster nav: adapter MapService bind failed (${error.javaClass.simpleName}: ${error.message})")
         }.getOrDefault(false)
         bound = ok
         report(if (ok) "Cluster nav: binding adapter MapService" else "Cluster nav: adapter MapService not available")
@@ -117,10 +119,11 @@ object Mg4ClusterNavigation {
             return
         }
         if (!guiding) {
-            call(service, TX_IS_MAP_NAVIGATING) { writeInt(1) }
+            if (!call(service, TX_IS_MAP_NAVIGATING) { writeInt(1) }) return
             val ok = call(service, TX_GUIDE_STATUS) { writeInt(1) }
-            guiding = true
             report("Cluster nav: guidance started sent=$ok")
+            if (!ok) return
+            guiding = true
         }
         if (maneuver == lastSent) return
         val icon = icon(maneuver.type, maneuver.drivingSide)
@@ -129,15 +132,19 @@ object Mg4ClusterNavigation {
             writeInt(maneuver.distanceMeters)
             writeString(maneuver.road)
         }
+        var allSent = ok
         if (maneuver.road != lastRoad) {
-            call(service, TX_ROAD_INFO) { writeString(maneuver.road) }
-            lastRoad = maneuver.road
+            val roadSent = call(service, TX_ROAD_INFO) { writeString(maneuver.road) }
+            if (roadSent) lastRoad = maneuver.road
+            allSent = roadSent && allSent
         }
         maneuver.remainingMeters?.let { metres ->
-            call(service, TX_REMAINING_DISTANCE) { writeInt(metres.coerceIn(0, Int.MAX_VALUE.toLong()).toInt()) }
+            val sent = call(service, TX_REMAINING_DISTANCE) { writeInt(metres.coerceIn(0, Int.MAX_VALUE.toLong()).toInt()) }
+            allSent = sent && allSent
         }
         maneuver.remainingSeconds?.let { seconds ->
-            call(service, TX_REMAINING_TIMES) { writeInt(((seconds + 59) / 60).coerceIn(0, Int.MAX_VALUE.toLong()).toInt()) }
+            val sent = call(service, TX_REMAINING_TIMES) { writeInt(((seconds + 59) / 60).coerceIn(0, Int.MAX_VALUE.toLong()).toInt()) }
+            allSent = sent && allSent
         }
         // Log turn changes, not every distance tick.
         if (lastSent?.type != maneuver.type || lastSent?.road != maneuver.road) {
@@ -148,19 +155,23 @@ object Mg4ClusterNavigation {
         if (lastSent?.distanceMeters != maneuver.distanceMeters) {
             report("Cluster nav: distance ${route.distanceDescription}")
         }
-        lastSent = maneuver
+        if (allSent) lastSent = maneuver
     }
 
-    private inline fun call(service: IBinder, code: Int, write: Parcel.() -> Unit): Boolean {
+    internal fun call(service: IBinder, code: Int, write: Parcel.() -> Unit): Boolean {
         val data = Parcel.obtain()
         val reply = Parcel.obtain()
         return try {
             data.writeInterfaceToken(DESCRIPTOR)
             data.write()
-            service.transact(code, data, reply, 0)
+            if (!service.transact(code, data, reply, 0)) {
+                report("Cluster nav: adapter transaction $code was not handled")
+                return false
+            }
             reply.readException()
             true
-        } catch (_: Exception) {
+        } catch (error: Exception) {
+            report("Cluster nav: adapter transaction $code failed (${error.javaClass.simpleName}: ${error.message})")
             false
         } finally {
             reply.recycle()

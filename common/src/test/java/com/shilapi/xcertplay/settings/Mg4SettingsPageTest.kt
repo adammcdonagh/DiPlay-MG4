@@ -5,6 +5,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import com.shilapi.xcertplay.AirPlayPersistence
+import com.shilapi.xcertplay.Mg4FirmwareProfile
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -35,6 +36,7 @@ class Mg4SettingsPageTest {
         override fun openCarHotspotSettings() {}
         override fun openCarWifiSettings() {}
         override fun editNavigationChannel(onSaved: () -> Unit) {}
+        override fun editMediaChannel(onSaved: () -> Unit) {}
         override fun setLocationReporting(enabled: Boolean) {}
         override fun checkForUpdates() {}
         override fun openAppPermissions() {}
@@ -80,11 +82,29 @@ class Mg4SettingsPageTest {
             page.open(category)
             assertTrue(category.name, texts().size > 5)
         }
+
         page.open(SettingsCategory.DISPLAY)
         tap("Advanced")
         assertTrue("Overlay video renderer" in texts())
         assertTrue(page.back())
         assertTrue("CarPlay screen".uppercase() in texts())
+    }
+
+    @Test fun swi68LabelsFormerSwi165SettingsAndExplainsTheMarker() {
+        page = Mg4SettingsPage(activity, host, Mg4FirmwareProfile.forFirmware("SWI68-29958-1300R69"))
+        page.open(SettingsCategory.CAR)
+        assertTrue("Directions on the dashboard (test) *" in texts())
+        assertTrue("Use car’s MFi chip (test) *" in texts())
+        assertTrue("* Originally for SWI165; not yet verified on SWI68." in texts())
+        page.open(SettingsCategory.DISPLAY)
+        assertTrue("Screen size reported to iPhone *" in texts())
+        page.open(SettingsCategory.SOUND)
+        assertTrue("Show calls to the car (test) *" in texts())
+        assertTrue("Tag music as CarPlay (test) *" in texts())
+        assertTrue("Car phone mode for calls (test) *" in texts())
+        assertTrue("Narrow-band calls (test) *" in texts())
+        assertTrue("Audio focus" in texts())
+        assertTrue("Media audio stream" in texts())
     }
 
     @Test fun pickerSavesAndGoesBack() {

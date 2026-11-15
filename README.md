@@ -48,7 +48,7 @@ The full test record is in [docs/MG4_SWI165.md](docs/MG4_SWI165.md).
 
 | Area | Change |
 |---|---|
-| Firmware profile | Reads `ro.build.mt2712.version` at start-up and applies SWI69 or SWI165 settings. Unknown firmware keeps upstream behaviour. |
+| Firmware profile | Reads `ro.build.mt2712.version` at start-up. SWI68 exposes the SWI165-only test settings without adopting SWI165 defaults; unknown firmware keeps upstream behaviour. |
 | Video | SWI165 draws CarPlay on the hardware video overlay (`SurfaceView`), like the stock AllGo CarPlay app. |
 | Audio | SWI165 plays CarPlay music and calls over Wi-Fi through DiPlay. Once CarPlay is up, the car's Bluetooth music link to the iPhone is disconnected; hands-free stays connected and pairing is kept. Call audio plays like the stock CarPlay app: voice audio tagged as car source 53, with the car in call mode (mg4.83). |
 | Calls over CarPlay only | Optional, on by default on MG4 (mg4.82). Keeps hands-free released for the whole CarPlay session, so calls can only come through CarPlay. A short press of the wheel phone key answers or ends a CarPlay call (mg4.78). |
@@ -66,6 +66,10 @@ The full test record is in [docs/MG4_SWI165.md](docs/MG4_SWI165.md).
 ## Settings
 
 On MG4, **Settings** is a two-pane screen like iOS Settings: a list of categories on the left and the chosen category on the right. It has Connection, Display, Sound, Car, General, Help and About; every setting is two taps from Home. The screen is built but not yet tried in the car. Other head units keep the upstream settings page.
+
+On SWI68, settings marked `*` were originally SWI165-only and have not yet been verified on the car. They remain off or automatic by default. The R69 firmware's exported map service has matching navigation method signatures and Binder transaction numbers; cluster output still needs an on-car test. Battery and parked-video settings remain unavailable on SWI68 because its vehicle reads have not been verified.
+
+In the R69 `SaicAdapterService_overseas_eh32` APK, `MapService` forwards guidance to `GeneralService` and, when navigation is active and the cluster manager is available, sends the turn to `ClusterManager`. The R69 `clusterinteraction_eh32_eu_P` APK receives the general-service callbacks in `MapServiceManager`. This is the native navigation-card path, not an overlay; service availability does not prove that the complete path works on a running car.
 
 Some settings only reach a running CarPlay session after it reconnects. Those rows carry a **Reconnect** tag, and changing one while connected shows **Some changes apply after CarPlay reconnects. Reconnect now**. Dark mode at sunset, Car battery on iPhone and Video while parked take effect straight away.
 
@@ -99,7 +103,7 @@ Hidden on MG4 because the firmware profile sets them: audio focus, advanced audi
 `MAJOR.MINOR.PATCH`, kept in `version.properties` (`versionName` and `versionCode`).
 Minor is a new feature or setting, patch is a fix only, major needs a manual step or
 breaks saved settings. `versionCode` only ever goes up, because Android refuses to
-install a lower one and the car has no ADB to force it. Debug builds add `-hud-test`
+install a lower one and the car has no ADB to force it. Debug builds add `-test`
 to the name, which the update check ignores.
 
 Work lands on `main` under `# Unreleased` in `CHANGELOG.md`. A release is cut when the

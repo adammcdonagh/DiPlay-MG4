@@ -65,6 +65,9 @@ internal enum class SettingRow(val kind: RowKind, val appliesOnReconnect: Boolea
     MIC_RECORDING(RowKind.SWITCH),
     SOUND_ADVANCED(RowKind.PAGE),
     NAVIGATION_CHANNEL(RowKind.LINK, true),
+    AUDIO_FOCUS(RowKind.SWITCH, true),
+    ADVANCED_AUDIO_MAPPING(RowKind.SWITCH, true),
+    MEDIA_CHANNEL(RowKind.LINK, true),
 
     CLUSTER_DIRECTIONS(RowKind.SWITCH, true),
     CAR_MFI_CHIP(RowKind.SWITCH, true),
@@ -99,10 +102,20 @@ internal data class SettingsEnvironment(
     val generation: Mg4FirmwareProfile.Generation,
     val sdkInt: Int,
     val connection: ConnectionChoice,
+    val advancedAudioMappingSupported: Boolean = false,
 )
 
 internal object SettingsLayout {
     val categories: List<SettingsCategory> = SettingsCategory.entries
+    val originallySwi165Only = setOf(
+        SettingRow.REPORTED_SCREEN_SIZE,
+        SettingRow.SHOW_CALLS_TO_CAR,
+        SettingRow.TAG_MUSIC_CARPLAY,
+        SettingRow.CAR_PHONE_MODE,
+        SettingRow.NARROW_BAND_CALLS,
+        SettingRow.CLUSTER_DIRECTIONS,
+        SettingRow.CAR_MFI_CHIP,
+    )
 
     fun groups(category: SettingsCategory, env: SettingsEnvironment): List<SettingsGroup> = when (category) {
         SettingsCategory.CONNECTION -> listOfNotNull(
@@ -122,36 +135,43 @@ internal object SettingsLayout {
         SettingsCategory.DISPLAY -> listOf(
             SettingsGroup("screen", listOfNotNull(
                 SettingRow.CARPLAY_SIZE,
-                SettingRow.REPORTED_SCREEN_SIZE.takeIf { env.generation == Mg4FirmwareProfile.Generation.SWI165 },
+                SettingRow.REPORTED_SCREEN_SIZE.takeIf { env.generation.supportsExperimentalCarSettings },
                 SettingRow.RIGHT_HAND_DRIVE,
                 SettingRow.FULL_SCREEN,
             )),
             SettingsGroup("picture", listOf(SettingRow.RESOLUTION, SettingRow.FRAME_RATE, SettingRow.EFFICIENT_VIDEO)),
             SettingsGroup("advanced", listOf(SettingRow.DISPLAY_ADVANCED)),
         )
-        SettingsCategory.SOUND -> listOf(
+        SettingsCategory.SOUND -> listOfNotNull(
             SettingsGroup("wifi_audio", listOf(SettingRow.WIFI_AUDIO)),
             SettingsGroup("calls", listOfNotNull(
                 SettingRow.CALLS_OVER_CARPLAY,
                 // Telecom mirroring and the music source tag copy the stock app's SAIC audio paths.
-                SettingRow.SHOW_CALLS_TO_CAR.takeIf { env.generation == Mg4FirmwareProfile.Generation.SWI165 },
-                SettingRow.TAG_MUSIC_CARPLAY.takeIf { env.generation == Mg4FirmwareProfile.Generation.SWI165 },
-                SettingRow.CAR_PHONE_MODE.takeIf { env.generation == Mg4FirmwareProfile.Generation.SWI165 },
-                SettingRow.NARROW_BAND_CALLS.takeIf { env.generation == Mg4FirmwareProfile.Generation.SWI165 },
+                SettingRow.SHOW_CALLS_TO_CAR.takeIf { env.generation.supportsExperimentalCarSettings },
+                SettingRow.TAG_MUSIC_CARPLAY.takeIf { env.generation.supportsExperimentalCarSettings },
+                SettingRow.CAR_PHONE_MODE.takeIf { env.generation.supportsExperimentalCarSettings },
+                SettingRow.NARROW_BAND_CALLS.takeIf { env.generation.supportsExperimentalCarSettings },
             )),
             SettingsGroup("buffer", listOf(SettingRow.MUSIC_BUFFER)),
             SettingsGroup("microphone", listOf(SettingRow.MICROPHONE, SettingRow.SIRI_MIC_PCM, SettingRow.CALL_ECHO_SUPPRESSION, SettingRow.MIC_RECORDING)),
+            SettingsGroup("legacy_audio", listOfNotNull(
+                SettingRow.AUDIO_FOCUS,
+                SettingRow.ADVANCED_AUDIO_MAPPING.takeIf { env.advancedAudioMappingSupported },
+                SettingRow.MEDIA_CHANNEL,
+            )).takeIf { env.generation == Mg4FirmwareProfile.Generation.SWI68 },
             SettingsGroup("advanced", listOf(SettingRow.SOUND_ADVANCED)),
         )
         SettingsCategory.CAR -> listOfNotNull(
             SettingsGroup("cluster", listOf(SettingRow.CLUSTER_DIRECTIONS))
-                .takeIf { env.generation == Mg4FirmwareProfile.Generation.SWI165 },
+                .takeIf { env.generation.supportsExperimentalCarSettings },
             SettingsGroup("location", listOf(SettingRow.SEND_LOCATION)),
-            SettingsGroup("parked", listOf(SettingRow.VIDEO_WHILE_PARKED)),
+            SettingsGroup("parked", listOf(SettingRow.VIDEO_WHILE_PARKED))
+                .takeIf { env.generation != Mg4FirmwareProfile.Generation.SWI68 },
             SettingsGroup("appearance", listOf(SettingRow.SUNSET_DARK_MODE)),
-            SettingsGroup("battery", listOf(SettingRow.CAR_BATTERY, SettingRow.CHARGING_CONNECTORS, SettingRow.LOW_CHARGE_WARNING)),
+            SettingsGroup("battery", listOf(SettingRow.CAR_BATTERY, SettingRow.CHARGING_CONNECTORS, SettingRow.LOW_CHARGE_WARNING))
+                .takeIf { env.generation != Mg4FirmwareProfile.Generation.SWI68 },
             SettingsGroup("mfi", listOf(SettingRow.CAR_MFI_CHIP))
-                .takeIf { env.generation == Mg4FirmwareProfile.Generation.SWI165 },
+                .takeIf { env.generation.supportsExperimentalCarSettings },
         )
         SettingsCategory.GENERAL -> listOf(
             SettingsGroup("general", listOf(SettingRow.SOFTWARE_UPDATE)),

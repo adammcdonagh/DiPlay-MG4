@@ -31,8 +31,21 @@ class Mg4FirmwareProfileTest {
     }
 
     @Test
+    fun swi68ExposesExperimentalSettingsWithoutChangingExistingDefaults() {
+        val profile = Mg4FirmwareProfile.forFirmware("SWI68-29958-1300R69")
+        assertEquals(Generation.SWI68, profile.generation)
+        assertTrue(profile.usesMg4Settings)
+        assertTrue(profile.supportsExperimentalCarSettings)
+        assertFalse(profile.isMg4)
+        assertFalse(profile.preferSurfaceVideo)
+        assertFalse(profile.squareCorners)
+        assertNull(profile.launcherCarPlayCard)
+        assertEquals(AudioMode.HYBRID_BLUETOOTH, profile.defaultAudioMode)
+    }
+
+    @Test
     fun unknownOrMissingFirmwareKeepsDefaults() {
-        for (firmware in listOf(null, "", "  ", "SWI68-1", "OTHER-1.0")) {
+        for (firmware in listOf(null, "", "  ", "SWI680-1", "OTHER-1.0")) {
             val profile = Mg4FirmwareProfile.forFirmware(firmware)
             assertEquals(Generation.OTHER, profile.generation)
             assertFalse(profile.preferSurfaceVideo)

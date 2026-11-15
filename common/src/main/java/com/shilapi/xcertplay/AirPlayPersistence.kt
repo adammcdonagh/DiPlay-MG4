@@ -282,7 +282,7 @@ object AirPlayPersistence {
      * always off.
      */
     fun loadShowCallsToCar(context: Context): Boolean {
-        if (!Mg4FirmwareProfile.detect().isMg4) return false
+        if (!Mg4FirmwareProfile.detect().usesMg4Settings) return false
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         return if (prefs.contains(KEY_SHOW_CALLS_TO_CAR)) prefs.getBoolean(KEY_SHOW_CALLS_TO_CAR, false) else false
     }
@@ -297,7 +297,7 @@ object AirPlayPersistence {
      * always off on other firmware.
      */
     fun loadCarPhoneMode(context: Context): Boolean {
-        if (!Mg4FirmwareProfile.detect().isMg4) return false
+        if (!Mg4FirmwareProfile.detect().usesMg4Settings) return false
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         return if (prefs.contains(KEY_CAR_PHONE_MODE)) prefs.getBoolean(KEY_CAR_PHONE_MODE, false) else false
     }
@@ -311,7 +311,7 @@ object AirPlayPersistence {
      * (Automatic, the default). A saved choice wins; always Automatic on other firmware.
      */
     fun loadStockScreenSize(context: Context): Boolean {
-        if (!Mg4FirmwareProfile.detect().isMg4) return false
+        if (!Mg4FirmwareProfile.detect().usesMg4Settings) return false
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         return if (prefs.contains(KEY_STOCK_SCREEN_SIZE)) prefs.getBoolean(KEY_STOCK_SCREEN_SIZE, false) else false
     }
@@ -326,7 +326,7 @@ object AirPlayPersistence {
      * always off on other firmware.
      */
     fun loadNarrowBandCalls(context: Context): Boolean {
-        if (!Mg4FirmwareProfile.detect().isMg4) return false
+        if (!Mg4FirmwareProfile.detect().usesMg4Settings) return false
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         return if (prefs.contains(KEY_NARROW_BAND_CALLS)) prefs.getBoolean(KEY_NARROW_BAND_CALLS, false) else false
     }
@@ -340,7 +340,7 @@ object AirPlayPersistence {
      * default (not yet tried in the car). A saved choice wins; always off on other firmware.
      */
     fun loadUseCarMfiChip(context: Context): Boolean {
-        if (!Mg4FirmwareProfile.detect().isMg4) return false
+        if (!Mg4FirmwareProfile.detect().usesMg4Settings) return false
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         return if (prefs.contains(KEY_USE_CAR_MFI)) prefs.getBoolean(KEY_USE_CAR_MFI, false) else false
     }
@@ -355,7 +355,7 @@ object AirPlayPersistence {
      * on other firmware.
      */
     fun loadTagMusicAsCarPlay(context: Context): Boolean {
-        if (!Mg4FirmwareProfile.detect().isMg4) return false
+        if (!Mg4FirmwareProfile.detect().usesMg4Settings) return false
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         return if (prefs.contains(KEY_TAG_MUSIC_CARPLAY)) prefs.getBoolean(KEY_TAG_MUSIC_CARPLAY, false) else false
     }

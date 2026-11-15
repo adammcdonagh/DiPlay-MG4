@@ -1,8 +1,17 @@
 package com.shilapi.xcertplay.vehicle
 
+import android.os.Binder
+import android.os.Parcel
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [28])
 class Mg4ClusterNavigationTest {
     private val leftHand = 1
     private val rightHand = 0
@@ -38,5 +47,24 @@ class Mg4ClusterNavigationTest {
         assertEquals(36, Mg4ClusterNavigation.icon(8, leftHand))
         assertEquals(17, Mg4ClusterNavigation.icon(13, leftHand))
         assertEquals(18, Mg4ClusterNavigation.icon(14, leftHand))
+    }
+
+    @Test
+    fun unhandledBinderTransactionIsNotReportedAsSuccess() {
+        assertFalse(Mg4ClusterNavigation.call(Binder(), 30) { writeInt(1) })
+    }
+
+    @Test
+    fun acceptedBinderTransactionSendsTheExpectedData() {
+        val service = object : Binder() {
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                assertEquals(30, code)
+                data.enforceInterface("com.saicmotor.adapterservice.IMapService")
+                assertEquals(1, data.readInt())
+                reply!!.writeNoException()
+                return true
+            }
+        }
+        assertTrue(Mg4ClusterNavigation.call(service, 30) { writeInt(1) })
     }
 }

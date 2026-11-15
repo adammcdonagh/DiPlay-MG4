@@ -185,6 +185,7 @@
     <string name="show_calls_to_car">Show calls to the car (test)</string>
     <string name="narrow_band_calls">Narrow-band calls (test)</string>
     <string name="settings_footer_narrow_band">Narrow-band calls offers the iPhone only 8 kHz audio for calls, as the car’s own CarPlay app can. Calls may sound thinner. Siri and music are unchanged. It applies after you reconnect; if calls go silent, turn it off. Off by default and not yet tried in the car.</string>
+    <string name="settings_swi165_test_legend">* Originally for SWI165; not yet verified on SWI68.</string>
     <string name="reported_screen_size">Screen size reported to iPhone</string>
     <string name="reported_screen_size_automatic">Automatic</string>
     <string name="reported_screen_size_stock">Stock (244 x 80 mm)</string>

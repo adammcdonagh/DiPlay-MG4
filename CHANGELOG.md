@@ -1,5 +1,7 @@
 # Unreleased
 
+- **SWI68 test settings.** Exposes the settings originally limited to SWI165, marked `*`, without changing SWI68's existing defaults. The R69 map service has the same navigation Binder methods and transaction numbers as SWI165; cluster directions and the other test settings still need testing on the car. Battery and parked-video settings remain unavailable until SWI68 vehicle reads are verified. Cluster navigation now logs failed Binder calls and retries failed guidance updates.
+
 # MG4CPlay 0.4.0 (SWI165 fork), 2026-11-12
 
 - **Car MFi chip probe and test option (not yet tried in the car).** On MG4 the app now asks the car's own MFi authentication chip, through the `mfid` socket, for its device id, serial, certificate size and a signature on a fixed test digest, and logs the result with the exact error if it can't (`Car MFi chip:` lines in the session log, plus a `Car MFi chip:` line in the report header). It is read only and never affects the session. A new switch, **Use car's MFi chip (test)** (Settings > Car > Authentication, off by default), signs the iPhone's authentication (iAP2 and AirPlay auth-setup) with that chip instead of the bundled identity. Applies after reconnect. If the chip can't be read, is a version the app doesn't handle, or fails while signing, that connection (or the rest of the run) uses the bundled identity and the log says why. Test plan I13 and I14.

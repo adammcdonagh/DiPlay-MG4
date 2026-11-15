@@ -31,7 +31,11 @@ import com.shilapi.xcertplay.settings.SettingsUi.Companion as Colors
  * beside it, as in iPad Settings. Below 850 dp wide it becomes one list that drills down.
  * [SettingsLayout] decides which rows appear; this class reads and saves their values.
  */
-internal class Mg4SettingsPage(private val activity: Activity, private val host: Host) {
+internal class Mg4SettingsPage(
+    private val activity: Activity,
+    private val host: Host,
+    private val profile: Mg4FirmwareProfile = Mg4FirmwareProfile.detect(),
+) {
     /** What the page needs from [com.shilapi.xcertplay.DiPlayActivity]: dialogs, system screens, reconnecting. */
     interface Host {
         val sessionRunning: Boolean
@@ -46,6 +50,7 @@ internal class Mg4SettingsPage(private val activity: Activity, private val host:
         fun openCarHotspotSettings()
         fun openCarWifiSettings()
         fun editNavigationChannel(onSaved: () -> Unit)
+        fun editMediaChannel(onSaved: () -> Unit)
         fun setLocationReporting(enabled: Boolean)
         fun checkForUpdates()
         fun openAppPermissions()
@@ -62,7 +67,6 @@ internal class Mg4SettingsPage(private val activity: Activity, private val host:
     private class Picker(val title: String, val options: List<String>, val selected: Int, val save: (Int) -> Unit)
 
     private val ui = SettingsUi(activity)
-    private val profile get() = Mg4FirmwareProfile.detect()
 
     /** The open category; null shows the category list on a narrow screen. */
     private var category: SettingsCategory? = SettingsCategory.CONNECTION
@@ -83,7 +87,10 @@ internal class Mg4SettingsPage(private val activity: Activity, private val host:
 
     private val wide get() = activity.resources.configuration.screenWidthDp >= 850
 
-    fun environment() = SettingsEnvironment(profile.generation, Build.VERSION.SDK_INT, connectionChoice())
+    fun environment() = SettingsEnvironment(
+        profile.generation, Build.VERSION.SDK_INT, connectionChoice(),
+        activity.resources.getBoolean(R.bool.config_advanced_audio_channel_mapping),
+    )
 
     /** Opens [target] the next time the page is built. */
     fun show(target: SettingsCategory) {
@@ -286,6 +293,9 @@ internal class Mg4SettingsPage(private val activity: Activity, private val host:
                 content.addView(box, LinearLayout.LayoutParams(-1, -2))
             }
             footers(group.key, env, content)
+            if (group.rows.any { it in SettingsLayout.originallySwi165Only }) {
+                content.addView(ui.groupFooter(activity.getString(R.string.settings_swi165_test_legend)))
+            }
             content.addView(View(activity), LinearLayout.LayoutParams(1, ui.dp(32)))
         }
     }
@@ -296,7 +306,7 @@ internal class Mg4SettingsPage(private val activity: Activity, private val host:
         "screen" -> R.string.settings_header_screen
         "picture" -> R.string.settings_header_picture
         "cluster" -> R.string.settings_header_driving
-        "location" -> R.string.settings_header_driving.takeIf { env.generation != Mg4FirmwareProfile.Generation.SWI165 }
+        "location" -> R.string.settings_header_driving.takeIf { !env.generation.supportsExperimentalCarSettings }
         "appearance" -> R.string.settings_header_appearance
         "battery" -> R.string.settings_header_battery
         "mfi" -> R.string.settings_header_mfi
@@ -328,7 +338,7 @@ internal class Mg4SettingsPage(private val activity: Activity, private val host:
             }
             "screen" -> {
                 add(R.string.settings_footer_screen)
-                if (env.generation == Mg4FirmwareProfile.Generation.SWI165) add(R.string.settings_footer_reported_screen_size)
+                if (env.generation.supportsExperimentalCarSettings) add(R.string.settings_footer_reported_screen_size)
             }
             "picture" -> add(R.string.settings_footer_picture)
             "overlay" -> add(R.string.overlay_video_renderer_description)
@@ -337,7 +347,7 @@ internal class Mg4SettingsPage(private val activity: Activity, private val host:
             "wifi_audio" -> add(R.string.carplay_wifi_audio_description)
             "calls" -> {
                 add(R.string.calls_over_carplay_only_description)
-                if (env.generation == Mg4FirmwareProfile.Generation.SWI165) {
+                if (env.generation.supportsExperimentalCarSettings) {
                     add(R.string.settings_footer_car_tests)
                     add(R.string.settings_footer_narrow_band)
                 }
@@ -345,6 +355,10 @@ internal class Mg4SettingsPage(private val activity: Activity, private val host:
             "buffer" -> add(R.string.settings_footer_buffer)
             "microphone" -> add(R.string.settings_footer_microphone)
             "navigation" -> add(R.string.contrib_audio_home_nav_channel_note)
+            "legacy_audio" -> {
+                add(R.string.contrib_audio_home_toggle_audio_focus_desc)
+                if (env.advancedAudioMappingSupported) add(R.string.use_usage_content_type_routing_instead_of_stream_type)
+            }
             "cluster" -> add(R.string.mg4_cluster_directions_description)
             "location" -> add(R.string.sends_precise_android_location_as_carplay_gps_data_when_th)
             "parked" -> add(R.string.settings_footer_video_while_parked)
@@ -401,6 +415,9 @@ internal class Mg4SettingsPage(private val activity: Activity, private val host:
         SettingRow.CALL_ECHO_SUPPRESSION -> R.string.call_echo_suppression
         SettingRow.MIC_RECORDING -> R.string.microphone_recording
         SettingRow.NAVIGATION_CHANNEL -> R.string.contrib_audio_home_nav_channel_label
+        SettingRow.AUDIO_FOCUS -> R.string.contrib_audio_home_toggle_audio_focus
+        SettingRow.ADVANCED_AUDIO_MAPPING -> R.string.advanced_audio_channel_mapping
+        SettingRow.MEDIA_CHANNEL -> R.string.contrib_audio_home_media_channel_label
         SettingRow.CLUSTER_DIRECTIONS -> R.string.mg4_cluster_directions
         SettingRow.CAR_MFI_CHIP -> R.string.use_car_mfi_chip
         SettingRow.SEND_LOCATION -> R.string.settings_send_location
@@ -418,7 +435,7 @@ internal class Mg4SettingsPage(private val activity: Activity, private val host:
         SettingRow.WIRELESS_HELP -> R.string.wireless_connection_help
         SettingRow.VERSION -> R.string.settings_version
         SettingRow.CREDITS -> R.string.settings_credits
-    })
+    }) + if (row in SettingsLayout.originallySwi165Only) " *" else ""
 
     // ---- Rows ----
 
@@ -470,7 +487,7 @@ internal class Mg4SettingsPage(private val activity: Activity, private val host:
                     segmented(rates.map { activity.getString(R.string.settings_fps, it) },
                         if (AirPlayPersistence.loadFps(activity) == 60) 1 else 0) { AirPlayPersistence.saveFps(activity, rates[it]) }
                 }
-                SettingRow.EFFICIENT_VIDEO -> switch(AirPlayPersistence.loadHevcChoice(activity) ?: true) { AirPlayPersistence.saveHevcEnabled(activity, it) }
+                SettingRow.EFFICIENT_VIDEO -> switch(AirPlayPersistence.loadHevcChoice(activity) ?: profile.isMg4) { AirPlayPersistence.saveHevcEnabled(activity, it) }
                 SettingRow.OVERLAY_RENDERER -> switch(AirPlayPersistence.loadSurfaceVideoRenderer(activity) ?: profile.preferSurfaceVideo) {
                     AirPlayPersistence.saveSurfaceVideoRenderer(activity, it)
                 }
@@ -514,6 +531,15 @@ internal class Mg4SettingsPage(private val activity: Activity, private val host:
                 }
                 SettingRow.NAVIGATION_CHANNEL -> link(AirPlayPersistence.loadNavigationAudioChannel(activity).toString()) {
                     host.editNavigationChannel { changed(row, AirPlayPersistence.loadNavigationAudioChannel(activity).toString()); host.render() }
+                }
+                SettingRow.AUDIO_FOCUS -> switch(AirPlayPersistence.loadAudioFocusEnabled(activity)) {
+                    AirPlayPersistence.saveAudioFocusEnabled(activity, it)
+                }
+                SettingRow.ADVANCED_AUDIO_MAPPING -> switch(AirPlayPersistence.loadAdvancedAudioChannelMapping(activity)) {
+                    AirPlayPersistence.saveAdvancedAudioChannelMapping(activity, it)
+                }
+                SettingRow.MEDIA_CHANNEL -> link(AirPlayPersistence.loadMediaAudioChannel(activity).toString()) {
+                    host.editMediaChannel { changed(row, AirPlayPersistence.loadMediaAudioChannel(activity).toString()); host.render() }
                 }
                 SettingRow.CAR_MFI_CHIP -> switch(AirPlayPersistence.loadUseCarMfiChip(activity)) {
                     // A fresh choice gets a fresh try, even if the chip failed earlier this run.
